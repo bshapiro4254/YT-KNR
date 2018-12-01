@@ -16,7 +16,9 @@ import sys
 import re
 import pickle
 import time
+import random 
 
+D_Count = 0
 def read_cache():
 	if os.path.isfile("artist_cache_dict.pickle"):
 		print '[CDDB Cache] Reading cache'
@@ -101,7 +103,12 @@ def playlist_items_list_by_playlist_id(client, **kwargs):
 		**kwargs
 	).execute()
 	return response
-
+	
+def format_for_match(data):
+	delete_special = re.compile(r'[\!\\\/\|\{\}\[\]\(\)\.\,\'\"\+\-\=\@\#\$\%\^\&\*_]')
+	data = re.sub(delete_special,'',data)
+	data = data.lower()
+	return data
 
 def extract_and_retrieve(search_response):
 	for search_result in search_response.get("items", []):
@@ -151,38 +158,58 @@ def youtube_search(options,My_artist,TrackTitle):
 	videos = []
 	channels = []
 	playlists = []
-	exclude_list1 = re.compile(ur'[\(\[\<][lL][iI][vV][eE][\>\)\]]')
-	exclude_list2 = re.compile(ur'[\(\[\<][fF][uU][lL][lL]')
-	exclude_list3 = re.compile(ur'[\(\[\<][Cc][oO][Vv][eE][rR][\>\)\]]')
+	include_list1 = re.compile(ur'[Ll][Yy][rR][Ii][cC]|[oO][fF][iI][Cc][Ii][aA][lL]') 
+	exclude_list1 = re.compile(ur'[\(\[\<][lL][iI][vV][eE][\>\)\]]|[\(\[\<][fF][uU][lL][lL]|[\(\[\<][Cc][oO][Vv][eE][rR][\>\)\]]')
+	exclude_list2 = re.compile(ur'^.*?[lL][iI][vV][eE]|[lL][iI][vV][eE].*?$|.*?$[Cc][oO][Vv][eE][rR]|[Cc][oO][Vv][eE][rR].*?$')
+	exclude_list3 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]|[aA][tT][\ ][a-zA-Z].*|[@][\ ][a-zA-Z].*')
 	# Add each result to the appropriate list, and then display the lists of
 	# matching videos, channels, and playlists.
-	for search_result in search_response.get("items", []):
-		#print search_result
-		if search_result["id"]["kind"] == u"youtube#video":
-			# print TrackTitle
-			# print search_result["snippet"]["title"].lower()
-			if TrackTitle in search_result["snippet"]["title"].lower():
-				if len(re.findall(exclude_list1,search_result["snippet"]["title"])) > 0:
-					continue
-				elif len(re.findall(exclude_list2,search_result["snippet"]["title"])) > 0:
-					continue
-				elif len(re.findall(exclude_list3,search_result["snippet"]["title"])) > 0:
-					continue
+	second_scan = {}
+	for x in range(0,2):
+		for search_result in search_response.get("items", []):
+			#print search_result
+			if search_result["id"]["kind"] == u"youtube#video":
+				# print TrackTitle
+				# print search_result["snippet"]["title"].lower()
+				# print(format_for_match(TrackTitle))
+				# print(format_for_match(search_result["snippet"]["title"]))
+				if format_for_match(TrackTitle) in format_for_match(search_result["snippet"]["title"]):
+					if x == 0:
+						if len(re.findall(include_list1,search_result["snippet"]["title"])) > 0:
+							if len(re.findall(exclude_list1,search_result["snippet"]["title"])) > 0:
+								continue
+							elif len(re.findall(exclude_list2,search_result["snippet"]["title"])) > 0:
+								continue
+							elif len(re.findall(exclude_list3,search_result["snippet"]["title"])) > 0:
+								continue
+							else:
+								return search_result["id"]["videoId"], search_result["snippet"]["title"]
+					else:
+						if len(re.findall(exclude_list1,search_result["snippet"]["title"])) > 0:
+							continue
+						elif len(re.findall(exclude_list2,search_result["snippet"]["title"])) > 0:
+							continue
+						elif len(re.findall(exclude_list3,search_result["snippet"]["title"])) > 0:
+							continue
+						else:
+							return search_result["id"]["videoId"], search_result["snippet"]["title"]
 				else:
-					return search_result["id"]["videoId"], search_result["snippet"]["title"]
-			else:
-				continue
+					continue
 
 def Audio_downloader(Video_id):
+	# global D_Count
+	# D_Count += random.randint(0,99999)
+	# M_Count = D_Count + random.randint(0,99999)
 	print(u'[YTKnR] Downloading song from YouTube and converting to MP3')
 	ydl_opts = {
 		'format': 'bestaudio/best',
-		'outtmpl': '%(title)s-%(id)s.%(ext)s',
+		'outtmpl': '%(title)s-%(id)s.%(ext)s', 
 		'postprocessors': [{
 			'key': 'FFmpegExtractAudio',
 			'preferredcodec': 'mp3',
 			'preferredquality': '192',
 		}],}
+	time.sleep(3)
 	with youtube_dl.YoutubeDL(ydl_opts) as ydl:
 		myvid = u"http://www.youtube.com/watch?v={0}".format(Video_id)
 		result = ydl.extract_info("{}".format(myvid))
@@ -326,10 +353,12 @@ def fix_cddb_title(track):
 	search_tt_1_re = re.compile(r'[\[\(\<]')
 
 	search_tt_2_re = re.compile(r'[\)\]\>]')
-	search_tt_3_re = re.compile(r'[aA][Ll][Bb][Uu][Mm][\ ][vV][eE][rR][sS][Ii][Oo][Nn]')
+	search_tt_4_re = re.compile(r'[aA][Ll][Bb][Uu][Mm][\ ]|[vV][eE][rR][sS][Ii][Oo][Nn]|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd]')
+	search_tt_3_re = re.compile(r'[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ]0[Ii][Nn][\ ][0-9].*|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ][0-9].*')
 	track = re.sub(search_tt_1_re,'',track)
 	track = re.sub(search_tt_2_re,'',track)
 	track = re.sub(search_tt_3_re,'',track)
+	track = re.sub(search_tt_4_re,'',track)
 	
 	track = track.rstrip()
 	track = track.lstrip()
@@ -357,9 +386,9 @@ def fix_cddb_artist(artist,artist_name):
 	return sartist,kartist 
 
 def filter_live(album):
-	exclude_list = re.compile(r'[lL][iI][vV][eE]')
-	exclude_list2 = re.compile(r'[lL][iI][vV][eE]\ [aA][tT]')
-	exclude_list3 = re.compile(r'[\(\[][lL][iI][vV][eE][\)\]]')
+	exclude_list = re.compile(ur'[lL][iI][vV][eE]|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr]')
+	exclude_list2 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]')
+	exclude_list3 = re.compile(ur'[\(\[][lL][iI][vV][eE][\)\]]')
 	salbum = unicode(album)
 	if len(re.findall(exclude_list,salbum)) > 0:
 		return False
@@ -798,18 +827,41 @@ def down_list(selected_list):
 				print tn
 				print track
 				down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
-	with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-		future_to_dl = {executor.submit(down_and_process, vars): vars for vars in down_dict}
-		for future in concurrent.futures.as_completed(future_to_dl):
-			dl = future_to_dl[future]
-			try:
-				data = future.result()
-			except Exception as exc:
-				print('%r generated an exception: %s' % (dl, exc))
-			else:
-				print('%r result is %d' % (dl, data))
+	down_control_loop(down_dict)
+		
 	return None, None, None
 
+def down_control_loop(down_dict):
+		collected_count = 0
+		retry_list = down_dict[0:]
+		retry_count = 2
+		if len(retry_list) > 0:
+			while len(retry_list) > 0 and retry_count > 0:
+				print(u"[YTKnR] Beginning DL Loop....({0})".format(retry_count))
+				print(u"[YTKnR] ({0}) tracks completed.".format(retry_count))
+				print(u"[YTKnR] Collecting ({0}) Tracks....".format(len(retry_list)))
+				
+				retry_count -= 1
+				this_pass = retry_list[0:]
+				retry_list = []
+				with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+					future_to_dl = {executor.submit(down_and_process, vars): vars for vars in down_dict}
+					for future in concurrent.futures.as_completed(future_to_dl):
+						dl = future_to_dl[future]
+						try:
+							data = future.result()
+						except Exception as exc:
+							print('%r generated an exception: %s' % (dl, exc))
+						else:
+							print('%r result is %d' % (dl, data))
+						if data == 1:
+							retry_list.append(dl)
+						elif data == 0:
+							collected_count += 1
+						print(u"[YTKnR] Beginning DL Loop....({0})".format(retry_count))
+		print(u"[YTKnR] ({0}) tracks completed.".format(retry_count))
+		print(u"[YTKnR] Collecting ({0}) Tracks....".format(len(down_dict)))
+	
 def down_and_process(vars):
 	vars = vars.split('##')
 	My_artist = vars[0]
@@ -819,7 +871,7 @@ def down_and_process(vars):
 	try:
 		if does_mp3_exist(unicode(My_artist), unicode(My_album), unicode(track), tn) == True:
 			print(u"[YTKnR] You already have this one.")
-			return 1
+			return 0
 	except:
 		print(u"[YTKnR] Something went wrong.")
 		return 1
@@ -827,11 +879,13 @@ def down_and_process(vars):
 		Video_id, mp3_tn = you_tube_fe(unicode(My_artist),unicode(track))
 		if Video_id == None:
 			return 1
+		time.sleep(3)
 	except:
 		print(u"[YTKnR] An HTTP error occurred:")
 		return 1
 	try:
 		MyFile = unicode(Audio_downloader(Video_id))
+		time.sleep(3)
 		MyFile = rename_mp3s(unicode(MyFile), unicode(My_artist), unicode(My_album), unicode(track), tn)
 		print(MyFile)
 	except: 
@@ -839,6 +893,7 @@ def down_and_process(vars):
 		return 1
 	print('[ID3 Tag Management] Writing ID3 Tags for track.')
 	try:
+		time.sleep(2)
 		wtags = ID3(unicode(MyFile))
 		wtags['ARTIST'] = unicode(My_artist)
 		wtags['TITLE']  = unicode(track)
@@ -949,16 +1004,8 @@ def down_discography(artist_name):
 								down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 								r += 1
 								#print down_dict
-		with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-			future_to_dl = {executor.submit(down_and_process, vars): vars for vars in down_dict}
-			for future in concurrent.futures.as_completed(future_to_dl):
-				dl = future_to_dl[future]
-				try:
-					data = future.result()
-				except Exception as exc:
-					print('%r generated an exception: %s' % (dl, exc))
-				else:
-					print('%r result is %d' % (dl, data))
+		down_control_loop(down_dict)
+					
 	return None, None, None
 
 
@@ -1049,16 +1096,7 @@ def down_album(artist_name,album_name):
 									down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 									#print down_dict
 
-		with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-			future_to_dl = {executor.submit(down_and_process, vars): vars for vars in down_dict}
-			for future in concurrent.futures.as_completed(future_to_dl):
-				dl = future_to_dl[future]
-				try:
-					data = future.result()
-				except Exception as exc:
-					print('%r generated an exception: %s' % (dl, exc))
-				else:
-					print('%r result is %d' % (dl, data))
+		down_control_loop(down_dict)
 	return None, None, None
 
 def down_song(artist_name,mytrack):
@@ -1127,16 +1165,7 @@ def down_song(artist_name,mytrack):
 								down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 								r += 1
 								#print down_dict
-		with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-			future_to_dl = {executor.submit(down_and_process, vars): vars for vars in down_dict}
-			for future in concurrent.futures.as_completed(future_to_dl):
-				dl = future_to_dl[future]
-				try:
-					data = future.result()
-				except Exception as exc:
-					print('%r generated an exception: %s' % (dl, exc))
-				else:
-					print('%r result is %d' % (dl, data))
+		down_control_loop(down_dict)
 	return None, None, None
 
 def Menu():
@@ -1389,14 +1418,14 @@ def Download_success():
 # tab of
 #	 https://cloud.google.com/console
 # Please ensure that you have enabled the YouTube Data API for your project.
-DEVELOPER_KEY = u"***Google API Key***"
+DEVELOPER_KEY = u"AIzaSyCr7qINwNVyXLIJhbnvqs4W5bD1UDPpgJ0"
 YOUTUBE_API_SERVICE_NAME = u"youtube"
 YOUTUBE_API_VERSION = u"v3"
 
 # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
 # the OAuth 2.0 information for this application, including its client_id and
 # client_secret.
-CLIENT_SECRETS_FILE = u"***SecRET***"
+CLIENT_SECRETS_FILE = u"client_secret_970781436062-e518hduj5tnguk00pc5lrle9s15fe6n0.apps.googleusercontent.com.json"
 
 # This OAuth 2.0 access scope allows for full read/write access to the
 # authenticated user's account and requires requests to use an SSL connection.
