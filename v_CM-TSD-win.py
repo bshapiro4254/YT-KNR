@@ -107,6 +107,8 @@ def playlist_items_list_by_playlist_id(client, **kwargs):
 def format_for_match(data):
 	delete_special = re.compile(r'[\!\\\/\|\{\}\[\]\(\)\.\,\'\"\+\-\=\@\#\$\%\^\&\*_]')
 	data = re.sub(delete_special,'',data)
+	for x in range(0,10):
+		data = re.sub('\ \ ',' ',data)
 	data = data.lower()
 	return data
 
@@ -158,7 +160,7 @@ def youtube_search(options,My_artist,TrackTitle):
 	videos = []
 	channels = []
 	playlists = []
-	include_list1 = re.compile(ur'[Ll][Yy][rR][Ii][cC]|[oO][fF][iI][Cc][Ii][aA][lL]') 
+	include_list1 = re.compile(ur'[Ll][Yy][rR][Ii][cC]|[oO][fF][iI][Cc][Ii][aA][lL]|[eE][Xx][Pp][Ll][Ii][Cc][Tt]') 
 	exclude_list1 = re.compile(ur'[\(\[\<][lL][iI][vV][eE][\>\)\]]|[\(\[\<][fF][uU][lL][lL]|[\(\[\<][Cc][oO][Vv][eE][rR][\>\)\]]')
 	exclude_list2 = re.compile(ur'^.*?[lL][iI][vV][eE]|[lL][iI][vV][eE].*?$|.*?$[Cc][oO][Vv][eE][rR]|[Cc][oO][Vv][eE][rR].*?$')
 	exclude_list3 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]|[aA][tT][\ ][a-zA-Z].*|[@][\ ][a-zA-Z].*')
@@ -197,13 +199,13 @@ def youtube_search(options,My_artist,TrackTitle):
 					continue
 
 def Audio_downloader(Video_id):
-	# global D_Count
-	# D_Count += random.randint(0,99999)
-	# M_Count = D_Count + random.randint(0,99999)
+	global D_Count
+	D_Count += random.randint(1,99)
+	M_Count = D_Count + random.randint(1,99)
 	print(u'[YTKnR] Downloading song from YouTube and converting to MP3')
 	ydl_opts = {
 		'format': 'bestaudio/best',
-		'outtmpl': '%(title)s-%(id)s.%(ext)s', 
+		'outtmpl':  '%(title)s-%(id)s-' + str(M_Count) + '.%(ext)s', 
 		'postprocessors': [{
 			'key': 'FFmpegExtractAudio',
 			'preferredcodec': 'mp3',
@@ -341,8 +343,8 @@ def fix_cddb_title(track):
 	s2 = u'<'
 	s3 = u'\('
 	s4 = u'\)'
-	exclude_list = r'[lL][iI][vV][eE]$'
-	exclude_list2 = r'[\(\[][lL][iI][vV][eE][\)\]]'
+	exclude_list = r'[lL][iI][vV][eE]$|[eE][Xx][Pp][Ll][Ii][Cc][Tt]$' 
+	exclude_list2 = r'[\(\[\<][lL][iI][vV][eE][\)\]\>]|[\(\[\<][eE][Xx][Pp][Ll][Ii][Cc][Tt][\)\]\>]'
 	track = unicode(track)
 	track = re.sub(s1,'',track)
 	track = re.sub(s2,'',track)
@@ -411,6 +413,7 @@ def rename_mp3s(mp3_fn, Artist, My_album, Title, TN):
 	print('[File Management] Renaming Files with artist, album, track and title information')
 	try:
 		os.rename(mp3_fn, nfn)
+		time.sleep(2)
 		nfn = sort_mp3s(nfn,jnfn,Artist,My_album)
 	except:
 		print(u"[File Management] File name rewrite failed. File not found")
@@ -832,9 +835,25 @@ def down_list(selected_list):
 	return None, None, None
 
 def down_control_loop(down_dict):
+		retry_count = 2
+		dupe_found = 0
+		for track in down_dict:
+			track_s1 = track.split('##')[2]
+			for track2 in down_dict:
+				track_s2 = track2.split('##')[2]
+				if track_s2.lower() == track_s1.lower():
+					dupe_found += 0
+					if dupe_found > 1:
+						down_dict.remove(track2)
+					else:
+						continue
+				else:
+						continue
+			dupe_found = 0
 		collected_count = 0
 		retry_list = down_dict[0:]
-		retry_count = 2
+
+						
 		if len(retry_list) > 0:
 			while len(retry_list) > 0 and retry_count > 0:
 				print(u"[YTKnR] Beginning DL Loop....({0})".format(retry_count))
@@ -859,9 +878,20 @@ def down_control_loop(down_dict):
 						elif data == 0:
 							collected_count += 1
 						print(u"[YTKnR] Beginning DL Loop....({0})".format(retry_count))
-		print(u"[YTKnR] ({0}) tracks completed.".format(retry_count))
+
+				temp_file_clean()
+			temp_file_clean()
+		print(u"[YTKnR] ({0}) tracks completed.".format(collected_count))
 		print(u"[YTKnR] Collecting ({0}) Tracks....".format(len(down_dict)))
 	
+def temp_file_clean():
+	cleanup=os.listdir(os.getcwd())
+	for file in cleanup:
+		file = file
+		ext_regex = re.compile(r'\.[mM][pP]3|\.[pP][aA][Rr][Tt]')
+		if len(re.findall(ext_regex,file)) > 0:
+			os.remove(file)
+		
 def down_and_process(vars):
 	vars = vars.split('##')
 	My_artist = vars[0]
@@ -879,13 +909,13 @@ def down_and_process(vars):
 		Video_id, mp3_tn = you_tube_fe(unicode(My_artist),unicode(track))
 		if Video_id == None:
 			return 1
-		time.sleep(3)
+		time.sleep(random.randint(3,7))
 	except:
 		print(u"[YTKnR] An HTTP error occurred:")
 		return 1
 	try:
 		MyFile = unicode(Audio_downloader(Video_id))
-		time.sleep(3)
+		time.sleep(random.randint(3,7))
 		MyFile = rename_mp3s(unicode(MyFile), unicode(My_artist), unicode(My_album), unicode(track), tn)
 		print(MyFile)
 	except: 
@@ -893,7 +923,7 @@ def down_and_process(vars):
 		return 1
 	print('[ID3 Tag Management] Writing ID3 Tags for track.')
 	try:
-		time.sleep(2)
+		time.sleep(random.randint(2,4))
 		wtags = ID3(unicode(MyFile))
 		wtags['ARTIST'] = unicode(My_artist)
 		wtags['TITLE']  = unicode(track)
