@@ -161,7 +161,7 @@ def youtube_search(options,My_artist,TrackTitle):
 	videos = []
 	channels = []
 	playlists = []
-	include_list1 = re.compile(ur'[Ll][Yy][rR][Ii][cC]|[oO][fF][iI][Cc][Ii][aA][lL]|[eE][Xx][Pp][Ll][Ii][Cc][Tt]') 
+	include_list1 = re.compile(ur'[Ll][Yy][rR][Ii][cC]|[oO][fF][iI][Cc][Ii][aA][lL]|[eE][Xx][Pp][Ll][Ii][Cc][Ii][Tt]') 
 	exclude_list1 = re.compile(ur'[\(\[\<][lL][iI][vV][eE][\>\)\]]|[\(\[\<][fF][uU][lL][lL]|[\(\[\<][Cc][oO][Vv][eE][rR][\>\)\]]')
 	exclude_list2 = re.compile(ur'^.*?[lL][iI][vV][eE]|[lL][iI][vV][eE].*?$|.*?$[Cc][oO][Vv][eE][rR]|[Cc][oO][Vv][eE][rR].*?$')
 	exclude_list3 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]|[aA][tT][\ ][a-zA-Z].*|[@][\ ][a-zA-Z].*')
@@ -355,8 +355,8 @@ def fix_cddb_title(track):
 	track = track[1]
 	search_tt_1_re = re.compile(r'[\[\(\<]')
 	search_tt_2_re = re.compile(r'[\)\]\>]')
-	search_tt_4_re = re.compile(r'[aA][Ll][Bb][Uu][Mm][\ ]|[vV][eE][rR][sS][Ii][Oo][Nn]|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd]')
-	search_tt_3_re = re.compile(r'[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ]0[Ii][Nn][\ ][0-9].*|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ][0-9].*|[eE][Xx][Pp][Ll][Ii][Cc][Tt]|[Dd][Ee][Mm][Oo]')
+	search_tt_4_re = re.compile(r'[aA][Ll][Bb][Uu][Mm][\ ]|[vV][eE][rR][sS][Ii][Oo][Nn]|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd]|[Ee][Dd][Ii][Tt][Ee][Dd]')
+	search_tt_3_re = re.compile(r'[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ][Ii][Nn][\ ][0-9].*|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ][0-9].*|[eE][Xx][Pp][Ll][Ii][Cc][Ii][Tt]|[Dd][Ee][Mm][Oo]')
 	track = re.sub(search_tt_1_re,'',track)
 	track = re.sub(search_tt_2_re,'',track)
 	track = re.sub(search_tt_3_re,'',track)
