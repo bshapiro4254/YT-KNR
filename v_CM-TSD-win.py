@@ -1448,14 +1448,14 @@ def Download_success():
 # tab of
 #	 https://cloud.google.com/console
 # Please ensure that you have enabled the YouTube Data API for your project.
-DEVELOPER_KEY = u"AIzaSyCr7qINwNVyXLIJhbnvqs4W5bD1UDPpgJ0"
+DEVELOPER_KEY = u""
 YOUTUBE_API_SERVICE_NAME = u"youtube"
 YOUTUBE_API_VERSION = u"v3"
 
 # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
 # the OAuth 2.0 information for this application, including its client_id and
 # client_secret.
-CLIENT_SECRETS_FILE = u"client_secret_970781436062-e518hduj5tnguk00pc5lrle9s15fe6n0.apps.googleusercontent.com.json"
+CLIENT_SECRETS_FILE = u"client_secret"
 
 # This OAuth 2.0 access scope allows for full read/write access to the
 # authenticated user's account and requires requests to use an SSL connection.
