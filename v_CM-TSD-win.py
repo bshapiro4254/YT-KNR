@@ -5,11 +5,12 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from easygui import *
 from Tkinter import *
-from ID3 import *
 import deezer
+import eyed3
 import youtube_dl
-import threading
+
 import concurrent.futures
+import threading
 import string
 import os
 import sys
@@ -343,8 +344,8 @@ def fix_cddb_title(track):
 	s2 = u'<'
 	s3 = u'\('
 	s4 = u'\)'
-	exclude_list = r'[lL][iI][vV][eE]$|[eE][Xx][Pp][Ll][Ii][Cc][Tt]$' 
-	exclude_list2 = r'[\(\[\<][lL][iI][vV][eE][\)\]\>]|[\(\[\<][eE][Xx][Pp][Ll][Ii][Cc][Tt][\)\]\>]'
+	exclude_list = r'[lL][iI][vV][eE]$' 
+	exclude_list2 = r'[\(\[\<][lL][iI][vV][eE][\)\]\>]'
 	track = unicode(track)
 	track = re.sub(s1,'',track)
 	track = re.sub(s2,'',track)
@@ -353,10 +354,9 @@ def fix_cddb_title(track):
 	track = track.split(':')
 	track = track[1]
 	search_tt_1_re = re.compile(r'[\[\(\<]')
-
 	search_tt_2_re = re.compile(r'[\)\]\>]')
 	search_tt_4_re = re.compile(r'[aA][Ll][Bb][Uu][Mm][\ ]|[vV][eE][rR][sS][Ii][Oo][Nn]|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd]')
-	search_tt_3_re = re.compile(r'[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ]0[Ii][Nn][\ ][0-9].*|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ][0-9].*')
+	search_tt_3_re = re.compile(r'[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ]0[Ii][Nn][\ ][0-9].*|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr][Ee][Dd][\ ][0-9].*|[eE][Xx][Pp][Ll][Ii][Cc][Tt]|[Dd][Ee][Mm][Oo]')
 	track = re.sub(search_tt_1_re,'',track)
 	track = re.sub(search_tt_2_re,'',track)
 	track = re.sub(search_tt_3_re,'',track)
@@ -389,7 +389,7 @@ def fix_cddb_artist(artist,artist_name):
 
 def filter_live(album):
 	exclude_list = re.compile(ur'[lL][iI][vV][eE]|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr]')
-	exclude_list2 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]')
+	exclude_list2 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]|[lL][iI][vV][eE][\ ][@]|[iI][nN][\ ][a-zA-Z].*$|[iI][nN][\ ][0-9].*$')
 	exclude_list3 = re.compile(ur'[\(\[][lL][iI][vV][eE][\)\]]')
 	salbum = unicode(album)
 	if len(re.findall(exclude_list,salbum)) > 0:
@@ -842,7 +842,7 @@ def down_control_loop(down_dict):
 			for track2 in down_dict:
 				track_s2 = track2.split('##')[2]
 				if track_s2.lower() == track_s1.lower():
-					dupe_found += 0
+					dupe_found += 1
 					if dupe_found > 1:
 						down_dict.remove(track2)
 					else:
@@ -891,17 +891,44 @@ def temp_file_clean():
 		ext_regex = re.compile(r'\.[mM][pP]3|\.[pP][aA][Rr][Tt]')
 		if len(re.findall(ext_regex,file)) > 0:
 			os.remove(file)
-		
+
+			
+def write_tags(MyFile,My_artist,My_album,track,tn):
+	wtags = eyed3.load(MyFile)
+	wtags.tag.artist = unicode(My_artist)
+	wtags.tag.title  = unicode(track)
+	if My_album != None:
+		wtags.tag.album  = unicode(My_album)
+	if tn != None:
+		wtags.tag.track_num = int(tn)
+	try:
+		wtags.tag.save()
+	except:
+		print(u'[ID3 Tag Management]Tag write failed, internal error.')
+		wtags = None
+		return 1
+	if wtags != None:
+		print(u'[ID3 Tag Management]Tag write successful.')
+		return True
+	elif wtag == None:
+		print(u'[ID3 Tag Management]Tag write failed, internal error.')
+		wtags = None
+		return False
+	wtags = None
+
+			
 def down_and_process(vars):
 	vars = vars.split('##')
 	My_artist = vars[0]
 	My_album = vars[1]
 	track = vars[2]
-	tn = vars[3]
+	tn = int(vars[3])
+	
+	print '[Wacky Idea] The current value for TN is: {0}'.format(tn)
 	try:
 		if does_mp3_exist(unicode(My_artist), unicode(My_album), unicode(track), tn) == True:
 			print(u"[YTKnR] You already have this one.")
-			return 0
+			return 2
 	except:
 		print(u"[YTKnR] Something went wrong.")
 		return 1
@@ -924,29 +951,14 @@ def down_and_process(vars):
 	print('[ID3 Tag Management] Writing ID3 Tags for track.')
 	try:
 		time.sleep(random.randint(2,4))
-		wtags = ID3(unicode(MyFile))
-		wtags['ARTIST'] = unicode(My_artist)
-		wtags['TITLE']  = unicode(track)
-		if My_album != None:
-			wtags['ALBUM']  = unicode(My_album)
-		if tn != None:
-			wtags['TRACK'] = unicode(str(tn))
-		try:
-			wtags.write()
-		except:
-			print(u'[ID3 Tag Management]Tag write failed, internal error.')
-			wtags = None
+		if write_tags(MyFile,My_artist,My_album,track,tn) == True:
+			pass
+		else:
 			return 1
-		if wtags != None:
-			print(u'[ID3 Tag Management]Tag write successful.')
-			#print(str(wtags))
-		elif wtag == None:
-			print(u'[ID3 Tag Management]Tag write failed, internal error.')
-			wtags = None
-			return 1
-		wtags = None
+		
 	except:
 			print(u'[ID3 Tag Management]Tag Rewrite failed. File not found.')
+			return 1
 	return 0
 
 def down_discography(artist_name):
