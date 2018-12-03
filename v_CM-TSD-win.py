@@ -120,7 +120,7 @@ def playlist_items_list_by_playlist_id(client, **kwargs):
 	return response
 	
 def format_for_match(data):
-	delete_special = re.compile(r'[\!\\\/\|\{\}\[\]\(\)\.\,\'\"\+\-\=\@\#\$\%\^\&\*_]')
+	delete_special = re.compile(r'[\!\?\\\/\|\{\}\[\]\(\)\<\>\.\,\'\"\+\-\=\@\#\$\%\^\&\*_\:\~\`]')
 	data = re.sub(delete_special,'',data)
 	for x in range(0,10):
 		data = re.sub('\ \ ',' ',data)
@@ -136,13 +136,16 @@ def extract_and_retrieve(search_response):
 			write_meta_tag(search_result["snippet"]["title"], search_result["snippet"]['resourceId']["videoId"])
 			#print search_result
 
-def you_tube_fe(My_artist,track):
+def you_tube_fe(My_album,My_artist,track, seq):
 	print(u'[YTSD] Formating search query')
 	try:
 		My_artist,null2,track = prep_data(My_artist,'Null', track)
 		track = track.lower()
 		track = re.sub('album version','',track)
-		My_YT_Search = u'{0} {1}'.format(My_artist,track)
+		if seq == 0:
+			My_YT_Search = u'\'{0}\'  \'{1}\' \'{2}\''.format(My_artist, track, My_album)
+		if seq == 1:
+			My_YT_Search = u'\'{0}\'  \'{1}\''.format(My_artist, track, My_album)
 		print My_YT_Search
 		args = {'auth_host_name':'localhost', 'auth_host_port':[8080, 8090], 'logging_level':'ERROR', 'max_results':50, 'noauth_local_webserver':False, 'q':My_YT_Search}
 	except:
@@ -176,13 +179,14 @@ def youtube_search(options,My_artist,TrackTitle):
 	channels = []
 	playlists = []
 	include_list1 = re.compile(ur'[Ll][Yy][rR][Ii][cC]|[oO][fF][iI][Cc][Ii][aA][lL]|[eE][Xx][Pp][Ll][Ii][Cc][Ii][Tt]') 
+	include_list2 = re.compile(ur'[Pp][Rr][Oo][Vv][Ii][Dd][Ee][Dd][\ ]')
 	exclude_list1 = re.compile(ur'[\(\[\<][lL][iI][vV][eE][\>\)\]]|[\(\[\<][fF][uU][lL][lL]|[\(\[\<][Cc][oO][Vv][eE][rR][\>\)\]]')
 	exclude_list2 = re.compile(ur'^.*?[lL][iI][vV][eE]|[lL][iI][vV][eE].*?$|.*?$[Cc][oO][Vv][eE][rR]|[Cc][oO][Vv][eE][rR].*?$')
 	exclude_list3 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]|[aA][tT][\ ][a-zA-Z].*|[@][\ ][a-zA-Z].*')
 	# Add each result to the appropriate list, and then display the lists of
 	# matching videos, channels, and playlists.
 	second_scan = {}
-	for x in range(0,2):
+	for x in range(0,3):
 		for search_result in search_response.get("items", []):
 			#print search_result
 			if search_result["id"]["kind"] == u"youtube#video":
@@ -192,21 +196,32 @@ def youtube_search(options,My_artist,TrackTitle):
 				# print(format_for_match(search_result["snippet"]["title"]))
 				if format_for_match(TrackTitle) in format_for_match(search_result["snippet"]["title"]):
 					if x == 0:
+						if format_for_match(TrackTitle) in format_for_match(search_result["snippet"]["title"]):
+							if len(re.findall(include_list2,search_result["snippet"]["description"])) > 0:
+								if len(re.findall(exclude_list1,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list1,search_result["snippet"]["description"])) > 0:
+									continue
+								elif len(re.findall(exclude_list2,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list2,search_result["snippet"]["description"])) > 0:
+									continue
+								elif len(re.findall(exclude_list3,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list3,search_result["snippet"]["description"])) > 0:
+									continue
+								else:
+									return search_result["id"]["videoId"], search_result["snippet"]["title"]
+					elif x == 1:
 						if len(re.findall(include_list1,search_result["snippet"]["title"])) > 0:
-							if len(re.findall(exclude_list1,search_result["snippet"]["title"])) > 0:
+							if len(re.findall(exclude_list1,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list1,search_result["snippet"]["description"])) > 0:
 								continue
-							elif len(re.findall(exclude_list2,search_result["snippet"]["title"])) > 0:
+							elif len(re.findall(exclude_list2,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list2,search_result["snippet"]["description"])) > 0:
 								continue
-							elif len(re.findall(exclude_list3,search_result["snippet"]["title"])) > 0:
+							elif len(re.findall(exclude_list3,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list3,search_result["snippet"]["description"])) > 0:
 								continue
 							else:
 								return search_result["id"]["videoId"], search_result["snippet"]["title"]
 					else:
-						if len(re.findall(exclude_list1,search_result["snippet"]["title"])) > 0:
+						if len(re.findall(exclude_list1,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list1,search_result["snippet"]["description"])) > 0:
 							continue
-						elif len(re.findall(exclude_list2,search_result["snippet"]["title"])) > 0:
+						elif len(re.findall(exclude_list2,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list2,search_result["snippet"]["description"])) > 0:
 							continue
-						elif len(re.findall(exclude_list3,search_result["snippet"]["title"])) > 0:
+						elif len(re.findall(exclude_list3,search_result["snippet"]["title"])) > 0 or len(re.findall(exclude_list3,search_result["snippet"]["description"])) > 0:
 							continue
 						else:
 							return search_result["id"]["videoId"], search_result["snippet"]["title"]
@@ -404,7 +419,7 @@ def fix_cddb_artist(artist,artist_name):
 
 def filter_live(album):
 	exclude_list = re.compile(ur'[lL][iI][vV][eE]|[Rr][Ee][Mm][Aa][Ss][Tt][Ee][Rr]')
-	exclude_list2 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]|[lL][iI][vV][eE][\ ][@]|[iI][nN][\ ][a-zA-Z].*$|[iI][nN][\ ][0-9].*$')
+	exclude_list2 = re.compile(ur'[lL][iI][vV][eE][\ ][aA][tT]|[lL][iI][vV][eE][\ ][@]|[lL][iI][vV][eE][\ ][iI][nN][\ ][a-zA-Z].*$|[iI][nN][\ ][0-9].*$')
 	exclude_list3 = re.compile(ur'[\(\[][lL][iI][vV][eE][\)\]]')
 	salbum = unicode(album)
 	if len(re.findall(exclude_list,salbum)) > 0:
@@ -948,9 +963,11 @@ def down_and_process(vars):
 		print(u"[YTKnR] Something went wrong.")
 		return 1
 	try:
-		Video_id, mp3_tn = you_tube_fe(unicode(My_artist),unicode(track))
+		Video_id, mp3_tn = you_tube_fe(unicode(My_album),unicode(My_artist),unicode(track),0)
 		if Video_id == None:
-			return 1
+			Video_id, mp3_tn = you_tube_fe(unicode(My_album),unicode(My_artist),unicode(track),1)
+			if Video_id == None:
+				return 1
 		time.sleep(random.randint(3,7))
 	except:
 		print(u"[YTKnR] An HTTP error occurred:")
