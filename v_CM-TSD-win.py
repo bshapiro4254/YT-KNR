@@ -14,12 +14,26 @@ import threading
 import string
 import os
 import sys
+import platform
+
 import re
 import pickle
 import time
 import random 
 
 D_Count = 0
+sys_type = platform.system()
+if 'inux' in sys_type:
+	cslash = '/'
+	mp3__folder = '{0}home{0}wrabbit{0}mp3z'.format(cslash)
+	
+elif 'indows' in sys_type:
+	cslash = '\\'
+	mp3__folder = 'c:{0}mp3z'.format(cslash)	
+
+else:
+	print 'System type not detected. Exiting.'
+	sys.exit(1)
 def read_cache():
 	if os.path.isfile("artist_cache_dict.pickle"):
 		print '[CDDB Cache] Reading cache'
@@ -206,7 +220,8 @@ def Audio_downloader(Video_id):
 	print(u'[YTKnR] Downloading song from YouTube and converting to MP3')
 	ydl_opts = {
 		'format': 'bestaudio/best',
-		'outtmpl':  '%(title)s-%(id)s-' + str(M_Count) + '.%(ext)s', 
+		'outtmpl':  '%(title)s-%(id)s-' + str(M_Count) + '.%(ext)s',
+		'prefer_ffmpeg': True,
 		'postprocessors': [{
 			'key': 'FFmpegExtractAudio',
 			'preferredcodec': 'mp3',
@@ -274,7 +289,7 @@ def write_meta_tag(mp3_tn,video_Id):
 
 def does_mp3_exist(My_Artist, My_Album, Title,TN):
 	My_Artist, My_Album, Title = prep_data(My_Artist, My_Album, Title)
-	mp3fn = u'C:\mp3z\{0}\{1}\{0} - {1} -({2})- {3}.mp3'.format(My_Artist,My_Album,TN, Title)
+	mp3fn = u'{4}{5}{0}{5}{1}{5}{0} - {1} -({2})- {3}.mp3'.format(My_Artist,My_Album,TN, Title,mp3__folder,cslash)
 	return os.path.isfile(mp3fn)
 
 def prep_data(My_Artist, My_album, Title):
@@ -404,11 +419,11 @@ def filter_live(album):
 def rename_mp3s(mp3_fn, Artist, My_album, Title, TN):
 	print('[File Management] Processing file.')
 	cwd = os.getcwd()
-	mp3_fn = u'{0}\{1}'.format(cwd,mp3_fn)
+	mp3_fn = u'{0}{2}{1}'.format(cwd,mp3_fn,cslash)
 	print(mp3_fn)
 	Artist, My_album, Title = prep_data(Artist, My_album, Title)
 	jnfn = u'{0} - {1} -({2})- {3}.mp3'.format(Artist,My_album,TN, Title)
-	nfn = u'{0}\{1}'.format(cwd,jnfn)
+	nfn = u'{0}{2}{1}'.format(cwd,jnfn,cslash)
 
 	print('[File Management] Renaming Files with artist, album, track and title information')
 	try:
@@ -423,10 +438,10 @@ def rename_mp3s(mp3_fn, Artist, My_album, Title, TN):
 def sort_mp3s(nfn,jnfn,Artist,My_album):
 	print('[File Management] Creating folders and Sorting files based on Artist | Album.')
 	cwd = os.getcwd()
-	root_mp3z = u"C:\mp3z"
-	artist_dir = u"C:\mp3z\{0}".format(Artist)
-	album_dir = u"{0}\{1}".format(artist_dir,My_album)
-	newfile = u'{0}\{1}'.format(album_dir,jnfn)
+	root_mp3z = unicode(mp3__folder)
+	artist_dir = u"{1}{2}{0}".format(Artist,mp3__folder,cslash)
+	album_dir = u"{0}{2}{1}".format(artist_dir,My_album,cslash)
+	newfile = u'{0}{2}{1}'.format(album_dir,jnfn,cslash)
 	print(u'[File Management] moving file to {0}'.format(album_dir))
 	if not os.path.exists(root_mp3z):
 		os.makedirs(root_mp3z)
@@ -488,7 +503,7 @@ def build_a_list(artist_name):
 					if eol_count >= eol:
 						msgbox('Artist Not Found! Try again.')
 						return {'Fail':'Fail'}
-				elif unicode(artist_name) == unicode(sartist):
+				elif unicode(artist_name).lower() == unicode(sartist).lower():
 					print(u'[CDDB Lookup] Located artist - {0}.'.format(kartist))
 					Artist_Track_list[kartist] = {}
 					Artist_Track_list[kartist]['Quit'] = 'Quit'
@@ -697,7 +712,7 @@ def build_my_down_list():
 					errmsg = errmsg + ('"%s" is a required field.\n\n' % fieldNames[i])
 				if errmsg == "": break # no problems found
 				fieldValues = multenterbox(errmsg, title, fieldNames, fieldValues)
-			artist = str(fieldValues[0])
+			artist = str(fieldValues[0]).lower()
 
 			endloop = False
 			if artist != prev_artist:
@@ -864,7 +879,7 @@ def down_control_loop(down_dict):
 				this_pass = retry_list[0:]
 				retry_list = []
 				with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-					future_to_dl = {executor.submit(down_and_process, vars): vars for vars in down_dict}
+					future_to_dl = {executor.submit(down_and_process, vars): vars for vars in this_pass}
 					for future in concurrent.futures.as_completed(future_to_dl):
 						dl = future_to_dl[future]
 						try:
@@ -990,7 +1005,7 @@ def down_discography(artist_name):
 					continue
 				# print sartist
 				# print artist_name
-				if unicode(artist_name) == unicode(sartist):
+				if unicode(artist_name).lower() == unicode(sartist).lower():
 					My_Albums = artist.get_albums()
 					for album in My_Albums:
 						try:
@@ -1088,7 +1103,7 @@ def down_album(artist_name,album_name):
 				sartist,kartist = fix_cddb_artist(artist,artist_name)
 				#print unicode(sartist)
 				#print unicode(artist_name)
-				if unicode(artist_name) == unicode(sartist):
+				if unicode(artist_name).lower() == unicode(sartist).lower():
 					print(u'[CDDB LOOKUP] Located Artist - {0}'.format(sartist))
 					My_Albums = artist.get_albums()
 					for album in My_Albums:
@@ -1172,7 +1187,7 @@ def down_song(artist_name,mytrack):
 				sartist,kartist = fix_cddb_artist(artist,artist_name)
 				# print sartist
 				# print artist_name
-				if unicode(artist_name) == unicode(sartist):
+				if unicode(artist_name).lower() == unicode(sartist).lower():
 					My_Albums = artist.get_albums()
 					for album in My_Albums:
 						if filter_live(album) == False:
@@ -1263,7 +1278,7 @@ The options are as follows:
 					errmsg = errmsg + ('"%s" is a required field.\n\n' % fieldNames[i])
 				if errmsg == "": break # no problems found
 				fieldValues = multenterbox(errmsg, title, fieldNames, fieldValues)
-			artist = fieldValues[0]
+			artist = fieldValues[0].lower()
 			down_discography(artist)
 			Download_success()
 			break
@@ -1283,8 +1298,8 @@ The options are as follows:
 					errmsg = errmsg + ('"%s" is a required field.\n\n' % fieldNames[i])
 				if errmsg == "": break # no problems found
 				fieldValues = multenterbox(errmsg, title, fieldNames, fieldValues)
-			artist = fieldValues[0]
-			album = fieldValues[1]
+			artist = fieldValues[0].lower()
+			album = fieldValues[1].lower()
 			down_album(artist,album)
 			Download_success()
 			break
@@ -1305,8 +1320,8 @@ The options are as follows:
 					errmsg = errmsg + ('"%s" is a required field.\n\n' % fieldNames[i])
 				if errmsg == "": break # no problems found
 				fieldValues = multenterbox(errmsg, title, fieldNames, fieldValues)
-			artist = fieldValues[0]
-			song = fieldValues[1]
+			artist = fieldValues[0].lower()
+			song = fieldValues[1].lower()
 			down_song(artist,song)
 			Download_success()
 			break
@@ -1329,7 +1344,7 @@ The options are as follows:
 						errmsg = errmsg + ('"%s" is a required field.\n\n' % fieldNames[i])
 					if errmsg == "": break # no problems found
 					fieldValues = multenterbox(errmsg, title, fieldNames, fieldValues)
-				artist = fieldValues[0]
+				artist = fieldValues[0].lower()
 				A_List = build_a_list(artist)
 				if len(A_List.items()) < 1:
 					msgbox('No tracks found. Did you type something wrong?')
@@ -1382,7 +1397,7 @@ The options are as follows:
 						errmsg = errmsg + ('"%s" is a required field.\n\n' % fieldNames[i])
 					if errmsg == "": break # no problems found
 					fieldValues = multenterbox(errmsg, title, fieldNames, fieldValues)
-				artist = str(fieldValues[0])
+				artist = str(fieldValues[0]).lower().lower()
 				endloop = False
 				A_List = build_a_list(artist)
 				if len(A_List.items()) < 1:
