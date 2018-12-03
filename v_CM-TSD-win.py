@@ -5,7 +5,10 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from easygui import *
 from Tkinter import *
+from spotipy import util as util
 import deezer
+import spotipy
+import itunes
 import eyed3
 import youtube_dl
 
@@ -468,6 +471,86 @@ def sort_mp3s(nfn,jnfn,Artist,My_album):
 	os.rename(nfn, newfile)
 	return newfile
 
+def add_spotify_list(name,down_dict):
+	print('[YTKNR] Searching spotify')
+	print down_dict
+	scope = 'user-library-read'
+	username = ''
+	token = util.prompt_for_user_token(username,scope,client_id='',client_secret='',redirect_uri='http://localhost/')
+
+	spotify = spotipy.Spotify(auth=token)
+	spot_artist = spotify.search(q='artist:' + name, type='artist')
+	for search,data in spot_artist.items():
+		for search2 in spot_artist[search]['items']:
+			print('-------------------------------------------------------')
+			if name.lower() == (search2['name']).lower():
+				Artist_name = (search2['name'])
+				Artist_Sid = (search2['id'])
+	print( Artist_name)
+
+			
+
+	results = spotify.artist_albums(Artist_Sid, album_type='album')
+	albums = results['items']
+	while results['next']:
+		results = spotify.next(results)
+		albums.extend(results['items'])
+
+	for album in albums:
+		found = False
+		if 'name' not in album.keys():
+			continue
+		elif type(album['name']) != str:
+			continue
+		for album_compare in down_dict:
+			print (album_compare)
+			if len(album_compare) > 1:
+				album_compare = album_compare.split('##')[1]
+				album_compare = re.sub('##','',album_compare)
+				print (album_compare + ' vs ' + album['name'])
+				if format_for_match(album_compare).lower() == format_for_match(album['name']).lower():
+					print('Already in list. skipping album : ' + album_compare)
+					found = True
+					break
+		if found == True:
+			found = False
+			print('Found on Spot. Not in list. Adding album :' + album['name'])
+			continue
+		
+		a_tracks = spotify.album_tracks(album['id'], limit=50, offset=0)
+		for track in a_tracks['items']:
+		#print(track['name'])
+			down_dict.append('{0}##{1}##{2}##{3}'.format(Artist_name,album,track['name'],track['track_number']))
+	down_dict = search_itunes(name,down_dict)
+	return down_dict
+	
+def search_itunes(name,down_dict):
+	print('[YTKNR] Searching spotify')
+	print down_dict
+	artist = itunes.search_artist('nine inch nails')[0]
+	for album in artist.get_albums():
+		for album_compare in down_dict:
+				print (album_compare)
+				if len(album_compare) > 1:
+					album_compare = album_compare.split('##')[1]
+					album_compare = re.sub('##','',album_compare)
+					print (album_compare + ' vs ' + album.get_name())
+					if format_for_match(album_compare).lower() == format_for_match(album.get_name()).lower():
+						print('Already in list. skipping album : ' + album_compare)
+						found = True
+						break
+		if found == True:
+			found = False
+			continue
+		for track in album.get_tracks():
+			print(album.get_name(), track.get_name())
+			try:
+				tname = (unicode(track.get_name()))
+			except:
+				continue
+			down_dict.append(u'{0}##{1}##{2}##{3}'.format(unicode(name),unicode(album.get_name()), tname, u'0'))
+	return down_dict	
+	
 def build_a_list(artist_name):
 	#print(album_name)
 	s1 = u'>'
@@ -572,6 +655,7 @@ def build_a_list(artist_name):
 									tn = tn + 1
 								except:
 									continue
+											
 	# print Artist_Track_list
 	try:
 		if cacheartist == True:
@@ -1078,6 +1162,7 @@ def down_discography(artist_name):
 								down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 								r += 1
 								#print down_dict
+		down_dict = add_spotify_list(artist_name,down_dict)
 		down_control_loop(down_dict)
 					
 	return None, None, None
@@ -1169,7 +1254,7 @@ def down_album(artist_name,album_name):
 									
 									down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 									#print down_dict
-
+		down_dict = add_spotify_list(artist_name,down_dict)
 		down_control_loop(down_dict)
 	return None, None, None
 
@@ -1239,6 +1324,7 @@ def down_song(artist_name,mytrack):
 								down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 								r += 1
 								#print down_dict
+		down_dict = add_spotify_list(artist_name,down_dict)
 		down_control_loop(down_dict)
 	return None, None, None
 
