@@ -542,13 +542,15 @@ def search_itunes(name,down_dict):
 		if found == True:
 			found = False
 			continue
+		tn = 0
 		for track in album.get_tracks():
+			tn += 1
 			print(album.get_name(), track.get_name())
 			try:
 				tname = (unicode(track.get_name()))
 			except:
 				continue
-			down_dict.append(u'{0}##{1}##{2}##{3}'.format(unicode(name),unicode(album.get_name()), tname, u'0'))
+			down_dict.append(u'{0}##{1}##{2}##{3}'.format(unicode(name),unicode(album.get_name()), tname, unicode(tn)))
 	return down_dict	
 	
 def build_a_list(artist_name):
@@ -655,7 +657,22 @@ def build_a_list(artist_name):
 									tn = tn + 1
 								except:
 									continue
-											
+			down_dict = []
+			for album in Artist_Track_list[kartist].keys():
+				down_dict.append(kartist + '##' + album  +'##NA##NA')
+			down_dict = add_spotify_list(kartist,down_dict)
+			for artist_data in down_dict:
+				if u'Quit' in artist_data:
+					continue
+				elif u'Back' in artist_data:
+					continue
+				artist_data = str(artist_data).split('##')
+				
+				print(artist_data[1])
+				print(artist_data[3])
+				if artist_data[1] not in Artist_Track_list[kartist].keys():
+					Artist_Track_list[kartist][artist_data[1]] = {}
+				Artist_Track_list[kartist][artist_data[1]][artist_data[3]] = artist_data[2]											
 	# print Artist_Track_list
 	try:
 		if cacheartist == True:
@@ -1162,7 +1179,6 @@ def down_discography(artist_name):
 								down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 								r += 1
 								#print down_dict
-		down_dict = add_spotify_list(artist_name,down_dict)
 		down_control_loop(down_dict)
 					
 	return None, None, None
@@ -1254,7 +1270,6 @@ def down_album(artist_name,album_name):
 									
 									down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 									#print down_dict
-		down_dict = add_spotify_list(artist_name,down_dict)
 		down_control_loop(down_dict)
 	return None, None, None
 
@@ -1324,7 +1339,6 @@ def down_song(artist_name,mytrack):
 								down_dict.append('{0}##{1}##{2}##{3}'.format(My_artist,My_album,track,tn))
 								r += 1
 								#print down_dict
-		down_dict = add_spotify_list(artist_name,down_dict)
 		down_control_loop(down_dict)
 	return None, None, None
 
